@@ -1,0 +1,58 @@
+﻿@page "/avdelning"
+
+<h3>AvdelningPage</h3>
+
+@code {
+    private string searchString = "";
+
+    private Avdelning avdelning = new Avdelning();
+
+    private List<Avdelning> avdelnings = new List<Avdelning>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        avdelnings = avdelningService.GetAll();
+    }
+
+    private bool Search(Avdelning avdelning)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (avdelning.AvdelningName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private List<Avdelning> GetAll()
+    {
+        avdelnings = avdelningService.GetAll();
+        return avdelnings;
+    }
+
+    private void Add()
+    {
+        if (avdelning.AvdelningId == 0)
+        {
+            avdelningService.Add(avdelning);
+        }
+        else
+        {
+            avdelningService.Update(avdelning);
+        }
+        avdelning = new Avdelning();
+        GetAll();
+    }
+
+    private void Update(Avdelning record)
+    {
+        avdelning = record;
+        StateHasChanged();
+    }
+
+    private async Task Delete(Avdelning record)
+    {
+        avdelningService.Delete(record);
+        GetAll();
+    }
+}
