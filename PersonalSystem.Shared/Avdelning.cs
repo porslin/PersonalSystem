@@ -12,5 +12,7 @@ namespace PersonalSystem.Shared
 
         public string AvdelningName { get; set; }
 
-        public List<Personal> Personals { get; set;  }
+        public List<Personal> Personals { get; set; }
+
+    }
 }
