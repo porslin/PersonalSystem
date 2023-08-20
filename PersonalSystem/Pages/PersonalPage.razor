@@ -1,0 +1,162 @@
+﻿@page "/personal"
+@using PersonalSystem.Shared
+@using System
+@using System.Linq
+@using static MudBlazor.CategoryTypes
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject IJSRuntime JsRuntime
+
+<h3>Personal</h3>
+<MudCard Elevation="25">
+    
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Hantera Personal</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent>
+
+        <EditForm OnValidSubmit="Add" OnInvalidSubmit='()=>snackBar.Add("Ange namn",Severity.Warning)' Model="@personal">
+            <MudGrid>
+                <MudItem xs="12" sm="4" md="6">
+                    <MudTextField @bind-Value="personal.FirstName" Label="Förnamn" Variant="Variant.Text" Margin="Margin.Normal"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="4" md="6">
+                    <MudTextField @bind-Value="personal.LastName" Label="Efternamn" Variant="Variant.Text" Margin="Margin.Normal"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="4" md="6">
+                    <MudTextField @bind-Value="personal.ManNumber" Label="Man Number" Variant="Variant.Text" Margin="Margin.Normal"></MudTextField>
+                </MudItem>
+                <MudItem xs="12" sm="4" md="6">
+                    <MudSelect T="int" Label="Välj Avdelning" @bind-Value="personal.AvdelningId">
+                        @foreach (var avdelning in avdelnings)
+                        {
+                            <MudSelectItem T="int" Value="@avdelning.AvdelningId">@avdelning.AvdelningName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <MudButton OnClick="Add" Color="Color.Info" Variant="Variant.Filled">Lägg till anställda</MudButton>
+
+        </EditForm>
+
+    </MudCardContent>
+
+</MudCard>
+<br />
+<MudTable Items="GetAll()" Filter="new Func<Personal, bool>(Search)" @bind-avdelning="personal">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Avdelningar</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Sök anställda"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Förnamn</MudTh>
+        <MudTh>Efternamn</MudTh>
+        <MudTh>Man Number</MudTh>
+        <MudTh>Avdelning</MudTh>
+        <MudTh>Åtgärd</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Förnamn">@context.FirstName</MudTd>
+        <MudTd DataLabel="Efternamn">@context.LastName</MudTd>
+        <MudTd DataLabel="Man Number">@context.ManNumber</MudTd>
+        <MudTd DataLabel="Avdelning">@context.Avdelning.AvdelningName</MudTd>
+        <MudTd DataLabel="Åtgärd">
+            <MudFab OnClick="@(()=>Update(context))" Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Size="Size.Small"></MudFab>
+            <MudFab OnClick="@(()=>Delete(context))" Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"></MudFab>
+
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+
+    // allows searching
+    private string searchString = "";
+
+    private Personal personal = new Personal();
+
+    private Avdelning avdelning = new Avdelning();
+
+    private List<Personal> personals = new List<Personal>();
+
+    private List<Avdelning> avdelnings = new List<Avdelning>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // everytime this page loads all the depts are taken from the db
+        avdelnings = avdelningService.GetAll();
+        personals = personalService.GetAll();
+    }
+
+    private bool Search(Personal personal)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+
+        // ordinalignorecase means it is not a case sensitive search
+        if (personal.FirstName.Contains(searchString, StringComparison.OrdinalIgnoreCase) || (personal.LastName.Contains(searchString, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+        // if theres no searchstring it should return false
+        return false;
+    }
+
+    // function to get all depts
+    private List<Personal> GetAll()
+    {
+        personals = personalService.GetAll();
+        return personals;
+    }
+
+    // function to add new depts
+    private void Add()
+    {
+        // search for if dept already exists first
+        if (personal.PersonalId == 0)
+        {
+            // if no such dept exists, add it
+            personalService.Add(personal);
+            snackBar.Add("Anställd tillagd", Severity.Success);
+        }
+        else
+        {
+            // if the dept alreaday exists, then update it
+            personalService.Update(personal);
+            snackBar.Add("Anställd uppdaterats", Severity.Success);
+        }
+        personal = new Personal();
+        GetAll();
+    }
+
+    // method for updating depts
+    private void Update(Personal record)
+    {
+        personal = record;
+        StateHasChanged();
+    }
+
+    private async Task Delete(Personal record)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("Bekräfta", "Är du säker");
+        if (confirmed)
+        {
+            personalService.Delete(record);
+            snackBar.Add("Anställd borttaget", Severity.Success);
+            GetAll();
+        }
+    }
+
+    private MudTable<Personal> _table;
+
+    private void PageChanged(int i)
+    {
+        _table.NavigateTo(i - 1);
+    }
+
+}

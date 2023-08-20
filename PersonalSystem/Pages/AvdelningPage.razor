@@ -1,49 +1,114 @@
 ﻿@page "/avdelning"
+@using PersonalSystem.Shared
+@using System
+@using System.Linq
+@using static MudBlazor.CategoryTypes
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject IJSRuntime JsRuntime
 
-<h3>AvdelningPage</h3>
+<MudCard Elevation="25">
+    
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Avdelningar</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    
+    <MudCardContent>
+        <EditForm OnInvalidSubmit="Add" Model="@avdelning">
+            <MudTextField @bind-Value="avdelning.AvdelningName" Label="Avdelningens namn">
+            </MudTextField>
+
+            <br />
+
+            <MudButton OnClick="Add" Color="Color.Info" Variant="Variant.Filled">Lägg till avdelning</MudButton>
+        </EditForm>
+    </MudCardContent>
+
+</MudCard>
+<br />
+<MudTable Items="GetAll()" Filter="new Func<Avdelning, bool>(Search)" @bind-avdelning="avdelning">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Avdelningar</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Sök avdelning"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Avdelning Namn</MudTh>
+        <MudTh>Åtgärd</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Avdelning Namn">@context.AvdelningName</MudTd>
+        <MudTd DataLabel="Åtgärd">
+            <MudFab OnClick="@(()=>Update(context))" Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Size="Size.Small"></MudFab>
+            <MudFab OnClick="@(()=>Delete(context))" Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"></MudFab>
+            
+        </MudTd>
+    </RowTemplate>
+</MudTable>
 
 @code {
+
+    // allows searching 
     private string searchString = "";
 
+    private Personal personal = new Personal();
+
     private Avdelning avdelning = new Avdelning();
+
+    private List<Personal> personals = new List<Personal>();
 
     private List<Avdelning> avdelnings = new List<Avdelning>();
 
     protected override async Task OnInitializedAsync()
     {
+        // everytime this page loads all the depts are taken from the db
         avdelnings = avdelningService.GetAll();
+        personals = personalService.GetAll();
     }
 
     private bool Search(Avdelning avdelning)
     {
         if (string.IsNullOrWhiteSpace(searchString)) return true;
+
+        // ordinalignorecase means it is not a case sensitive search
         if (avdelning.AvdelningName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
+        // if theres no searchstring it should return false
         return false;
     }
 
+    // function to get all depts 
     private List<Avdelning> GetAll()
     {
         avdelnings = avdelningService.GetAll();
         return avdelnings;
-    }
+    }   
 
+    // function to add new depts 
     private void Add()
     {
+        // search for if dept already exists first
         if (avdelning.AvdelningId == 0)
         {
+            // if no such dept exists, add it
             avdelningService.Add(avdelning);
+            snackBar.Add("Avdelning lagts till", Severity.Success);
         }
         else
         {
+            // if the dept alreaday exists, then update it
             avdelningService.Update(avdelning);
+            snackBar.Add("Avdelning uppdaterats", Severity.Success);
         }
         avdelning = new Avdelning();
         GetAll();
     }
 
+    // method for updating depts
     private void Update(Avdelning record)
     {
         avdelning = record;
@@ -53,6 +118,14 @@
     private async Task Delete(Avdelning record)
     {
         avdelningService.Delete(record);
+        snackBar.Add("Avdelning borttagen", Severity.Success);
         GetAll();
+    }
+
+    private MudTable<Avdelning> _table;
+
+    private void PageChanged(int i)
+    {
+        _table.NavigateTo(i - 1);
     }
 }
